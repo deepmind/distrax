@@ -21,6 +21,7 @@ import chex
 from distrax._src.distributions import categorical
 from distrax._src.utils import equivalence
 from distrax._src.utils import math
+import jax
 import jax.numpy as jnp
 import numpy as np
 
@@ -325,6 +326,15 @@ class CategoricalTest(equivalence.EquivalenceTest, parameterized.TestCase):
         call_args=(value,),
         assertion_fn=self.assertion_fn)
 
+  @chex.all_variants
+  def test_pdf_outside_domain(self):
+    probs = jnp.asarray([0.2, 0.3, 0.5])
+    dist = self.distrax_cls(probs=probs)
+    value = jnp.asarray([-1, -2, 3, 4], dtype=jnp.int32)
+    self.assertion_fn(
+        self.variant(dist.prob)(value), np.asarray([0., 0., 0., 0.]))
+    self.assertTrue(np.all(jnp.isinf(self.variant(dist.log_prob)(value))))
+
   @chex.all_variants(with_pmap=False)
   @parameterized.named_parameters(
       ('entropy; from 2d logits',
@@ -379,6 +389,31 @@ class CategoricalTest(equivalence.EquivalenceTest, parameterized.TestCase):
 
   def test_jittable(self):
     super()._test_jittable((np.array([0., 4., -1., 4.]),))
+
+  @parameterized.named_parameters(
+      ('single element', 2),
+      ('range', slice(-1)),
+      ('range_2', (slice(None), slice(-1))),
+  )
+  def test_slice(self, slice_):
+    logits = jnp.array(np.random.randn(3, 4, 5))
+    probs = jax.nn.softmax(jnp.array(np.random.randn(3, 4, 5)), axis=-1)
+    dist1 = self.distrax_cls(logits=logits)
+    dist2 = self.distrax_cls(probs=probs)
+    self.assertion_fn(
+        jax.nn.softmax(dist1[slice_].logits, axis=-1),
+        jax.nn.softmax(logits[slice_], axis=-1))
+    self.assertion_fn(dist2[slice_].probs, probs[slice_])
+
+  def test_slice_ellipsis(self):
+    logits = jnp.array(np.random.randn(4, 4, 5))
+    probs = jax.nn.softmax(jnp.array(np.random.randn(4, 4, 5)), axis=-1)
+    dist1 = self.distrax_cls(logits=logits)
+    dist2 = self.distrax_cls(probs=probs)
+    self.assertion_fn(
+        jax.nn.softmax(dist1[..., -1].logits, axis=-1),
+        jax.nn.softmax(logits[:, -1], axis=-1))
+    self.assertion_fn(dist2[..., -1].probs, probs[:, -1])
 
 
 if __name__ == '__main__':

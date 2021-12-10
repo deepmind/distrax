@@ -21,12 +21,14 @@ import chex
 from distrax._src.distributions import multinomial
 from distrax._src.utils import equivalence
 from distrax._src.utils import math
+import jax
 import jax.numpy as jnp
 import numpy as np
 from scipy import stats
 
 
 RTOL = 1e-3
+ATOL = 1e-6
 
 
 class MultinomialTest(equivalence.EquivalenceTest, parameterized.TestCase):
@@ -38,7 +40,8 @@ class MultinomialTest(equivalence.EquivalenceTest, parameterized.TestCase):
         [4, 3], dtype=np.float32)  # float dtype required for TFP
     self.probs = 0.5 * np.asarray([0.1, 0.4, 0.2, 0.3])  # unnormalized
     self.logits = np.log(self.probs)
-    self.assertion_fn = lambda x, y: np.testing.assert_allclose(x, y, rtol=RTOL)
+    self.assertion_fn = lambda x, y: np.testing.assert_allclose(  # pylint: disable=g-long-lambda
+        x, y, rtol=RTOL, atol=ATOL)
 
   @parameterized.named_parameters(
       ('from probs', False),
@@ -553,10 +556,43 @@ class MultinomialTest(equivalence.EquivalenceTest, parameterized.TestCase):
         assertion_fn=self.assertion_fn)
 
   def test_jittable(self):
-    super()._test_jittable(dist_kwargs={
-        'probs': np.asarray([1.0, 0.0, 0.0]),
-        'total_count': np.asarray([3, 10]),
-    })
+    super()._test_jittable(
+        dist_kwargs={
+            'probs': np.asarray([1.0, 0.0, 0.0]),
+            'total_count': np.asarray([3, 10])
+        },
+        assertion_fn=self.assertion_fn)
+
+  @parameterized.named_parameters(
+      ('single element', 2),
+      ('range', slice(-1)),
+      ('range_2', (slice(None), slice(-1))),
+  )
+  def test_slice(self, slice_):
+    logits = jnp.array(np.random.randn(3, 4, 5))
+    probs = jax.nn.softmax(jnp.array(np.random.randn(3, 4, 5)), axis=-1)
+    total_count = jnp.full((3, 4), fill_value=2)
+    dist1 = self.distrax_cls(total_count=total_count, logits=logits)
+    dist2 = self.distrax_cls(total_count=total_count, probs=probs)
+    self.assertion_fn(dist2[slice_].total_count, total_count[slice_])
+    self.assertion_fn(
+        jax.nn.softmax(dist1[slice_].logits, axis=-1),
+        jax.nn.softmax(logits[slice_], axis=-1))
+    self.assertion_fn(dist2[slice_].probs, probs[slice_])
+
+  def test_slice_ellipsis(self):
+    logits = jnp.array(np.random.randn(4, 4, 5))
+    probs = jax.nn.softmax(jnp.array(np.random.randn(4, 4, 5)), axis=-1)
+    total_count_value = 2
+    total_count = jnp.full((4, 4), fill_value=total_count_value)
+    dist1 = self.distrax_cls(total_count=total_count_value, logits=logits)
+    dist2 = self.distrax_cls(total_count=total_count_value, probs=probs)
+    self.assertion_fn(dist1[..., -1].total_count, total_count[..., -1])
+    self.assertion_fn(dist2[..., -1].total_count, total_count[..., -1])
+    self.assertion_fn(
+        jax.nn.softmax(dist1[..., -1].logits, axis=-1),
+        jax.nn.softmax(logits[:, -1], axis=-1))
+    self.assertion_fn(dist2[..., -1].probs, probs[:, -1])
 
 
 if __name__ == '__main__':

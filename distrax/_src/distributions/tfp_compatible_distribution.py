@@ -25,6 +25,7 @@ from tensorflow_probability.substrates import jax as tfp
 tfd = tfp.distributions
 
 Array = chex.Array
+ArrayNumpy = chex.ArrayNumpy
 Distribution = distribution.Distribution
 IntLike = distribution.IntLike
 PRNGKey = chex.PRNGKey
@@ -68,6 +69,9 @@ def tfp_compatible_distribution(
     def __getattr__(self, name: str):
       return getattr(base_distribution, name)
 
+    def __getitem__(self, index):
+      return tfp_compatible_distribution(base_distribution[index], name=name_)
+
     @property
     def allow_nan_stats(self) -> bool:
       """Proxy for the TFP property `allow_nan_stats`.
@@ -90,13 +94,13 @@ def tfp_compatible_distribution(
       """Returns a `TensorShape` with the `event_shape` of the distribution."""
       return tfp.tf2jax.TensorShape(base_distribution.event_shape)
 
-    def event_shape_tensor(self) -> Array:
+    def event_shape_tensor(self) -> ArrayNumpy:
       """See `Distribution.event_shape`."""
-      return jnp.array(base_distribution.event_shape, dtype=jnp.int32)
+      return np.array(base_distribution.event_shape, dtype=jnp.int32)
 
     @property
-    def experimental_shard_axis_names(self) -> None:
-      return None
+    def experimental_shard_axis_names(self):
+      return []
 
     @property
     def name(self) -> str:

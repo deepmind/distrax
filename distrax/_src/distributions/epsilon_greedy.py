@@ -16,6 +16,7 @@
 
 import chex
 from distrax._src.distributions import categorical
+from distrax._src.distributions import distribution
 import jax.numpy as jnp
 
 
@@ -45,7 +46,7 @@ class EpsilonGreedy(categorical.Categorical):
   def __init__(self,
                preferences: Array,
                epsilon: float,
-               dtype: jnp.dtype = jnp.int_):
+               dtype: jnp.dtype = int):
     """Initializes an EpsilonGreedy distribution.
 
     Args:
@@ -53,7 +54,26 @@ class EpsilonGreedy(categorical.Categorical):
       epsilon: Mixing parameter ε.
       dtype: The type of event samples.
     """
-    preferences = jnp.asarray(preferences)
-    greedy_probs = _argmax_with_random_tie_breaking(preferences)
+    self._preferences = jnp.asarray(preferences)
+    self._epsilon = epsilon
+    greedy_probs = _argmax_with_random_tie_breaking(self._preferences)
     probs = _mix_probs_with_uniform(greedy_probs, epsilon)
     super().__init__(probs=probs, dtype=dtype)
+
+  @property
+  def epsilon(self) -> float:
+    """Mixing parameters of the distribution."""
+    return self._epsilon
+
+  @property
+  def preferences(self) -> Array:
+    """Unnormalized preferences."""
+    return self._preferences
+
+  def __getitem__(self, index) -> 'EpsilonGreedy':
+    """See `Distribution.__getitem__`."""
+    index = distribution.to_batch_shape_index(self.batch_shape, index)
+    return EpsilonGreedy(
+        preferences=self.preferences[index],
+        epsilon=self.epsilon,
+        dtype=self.dtype)

@@ -12,13 +12,13 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 # ==============================================================================
-"""Tests for `laplace.py`."""
+"""Tests for `gamma.py`."""
 
 from absl.testing import absltest
 from absl.testing import parameterized
 
 import chex
-from distrax._src.distributions import laplace
+from distrax._src.distributions import gamma
 from distrax._src.utils import equivalence
 import jax.numpy as jnp
 import numpy as np
@@ -26,37 +26,37 @@ import numpy as np
 RTOL = 2e-2
 
 
-class LaplaceTest(equivalence.EquivalenceTest, parameterized.TestCase):
+class GammaTest(equivalence.EquivalenceTest, parameterized.TestCase):
 
   def setUp(self):
     # pylint: disable=too-many-function-args
-    super().setUp(laplace.Laplace)
+    super().setUp(gamma.Gamma)
     self.assertion_fn = lambda x, y: np.testing.assert_allclose(x, y, rtol=RTOL)
 
   @parameterized.named_parameters(
-      ('1d std laplace', (0, 1)),
-      ('2d std laplace', (np.zeros(2), np.ones(2))),
-      ('rank 2 std normal', (np.zeros((3, 2)), np.ones((3, 2)))),
-      ('broadcasted loc', (0, np.ones(3))),
-      ('broadcasted scale', (np.ones(3), 1)),
+      ('1d std gamma', (1, 1)),
+      ('2d std gamma', (np.ones(2), np.ones(2))),
+      ('rank 2 std gamma', (np.ones((3, 2)), np.ones((3, 2)))),
+      ('broadcasted concentration', (1, np.ones(3))),
+      ('broadcasted rate', (np.ones(3), 1)),
   )
   def test_event_shape(self, distr_params):
     super()._test_event_shape(distr_params, dict())
 
   @chex.all_variants
   @parameterized.named_parameters(
-      ('1d std laplace, no shape', (0, 1), ()),
-      ('1d std laplace, int shape', (0, 1), 1),
-      ('1d std laplace, 1-tuple shape', (0, 1), (1,)),
-      ('1d std laplace, 2-tuple shape', (0, 1), (2, 2)),
-      ('2d std laplace, no shape', (np.zeros(2), np.ones(2)), ()),
-      ('2d std laplace, int shape', ([0, 0], [1, 1]), 1),
-      ('2d std laplace, 1-tuple shape', (np.zeros(2), np.ones(2)), (1,)),
-      ('2d std laplace, 2-tuple shape', ([0, 0], [1, 1]), (2, 2)),
-      ('rank 2 std normal, 2-tuple shape', (np.zeros((3, 2)), np.ones(
+      ('1d std gamma, no shape', (1, 1), ()),
+      ('1d std gamma, int shape', (1, 1), 1),
+      ('1d std gamma, 1-tuple shape', (1, 1), (1,)),
+      ('1d std gamma, 2-tuple shape', (1, 1), (2, 2)),
+      ('2d std gamma, no shape', (np.ones(2), np.ones(2)), ()),
+      ('2d std gamma, int shape', ([1, 1], [1, 1]), 1),
+      ('2d std gamma, 1-tuple shape', (np.ones(2), np.ones(2)), (1,)),
+      ('2d std gamma, 2-tuple shape', ([1, 1], [1, 1]), (2, 2)),
+      ('rank 2 std gamma, 2-tuple shape', (np.ones((3, 2)), np.ones(
           (3, 2))), (2, 2)),
-      ('broadcasted loc', (0, np.ones(3)), (2, 2)),
-      ('broadcasted scale', (np.ones(3), 1), ()),
+      ('broadcasted concentration', (1, np.ones(3)), (2, 2)),
+      ('broadcasted rate', (np.ones(3), 1), ()),
   )
   def test_sample_shape(self, distr_params, sample_shape):
     distr_params = (np.asarray(distr_params[0], dtype=np.float32),
@@ -69,25 +69,25 @@ class LaplaceTest(equivalence.EquivalenceTest, parameterized.TestCase):
       ('float64', jnp.float64))
   def test_sample_dtype(self, dtype):
     dist = self.distrax_cls(
-        loc=jnp.zeros((), dtype), scale=jnp.ones((), dtype))
+        concentration=jnp.ones((), dtype), rate=jnp.ones((), dtype))
     samples = self.variant(dist.sample)(seed=self.key)
     self.assertEqual(samples.dtype, dist.dtype)
     chex.assert_type(samples, dtype)
 
   @chex.all_variants
   @parameterized.named_parameters(
-      ('1d std laplace, no shape', (0, 1), ()),
-      ('1d std laplace, int shape', (0, 1), 1),
-      ('1d std laplace, 1-tuple shape', (0, 1), (1,)),
-      ('1d std laplace, 2-tuple shape', (0, 1), (2, 2)),
-      ('2d std laplace, no shape', (np.zeros(2), np.ones(2)), ()),
-      ('2d std laplace, int shape', ([0, 0], [1, 1]), 1),
-      ('2d std laplace, 1-tuple shape', (np.zeros(2), np.ones(2)), (1,)),
-      ('2d std laplace, 2-tuple shape', ([0, 0], [1, 1]), (2, 2)),
-      ('rank 2 std normal, 2-tuple shape', (np.zeros((3, 2)), np.ones(
+      ('1d std gamma, no shape', (11, 3), ()),
+      ('1d std gamma, int shape', (11, 3), 1),
+      ('1d std gamma, 1-tuple shape', (11, 3), (1,)),
+      ('1d std gamma, 2-tuple shape', (1, 1), (2, 2)),
+      ('2d std gamma, no shape', (np.ones(2), np.ones(2)), ()),
+      ('2d std gamma, int shape', ([1, 1], [1, 1]), 1),
+      ('2d std gamma, 1-tuple shape', (np.ones(2), np.ones(2)), (1,)),
+      ('2d std gamma, 2-tuple shape', ([1, 1], [1, 1]), (2, 2)),
+      ('rank 2 std gamma, 2-tuple shape', (np.ones((3, 2)), np.ones(
           (3, 2))), (2, 2)),
-      ('broadcasted loc', (0, np.ones(3)), (2, 2)),
-      ('broadcasted scale', (np.ones(3), 1), ()),
+      ('broadcasted concentration', (1, np.ones(3)), (2, 2)),
+      ('broadcasted rate', (np.ones(3), 1), ()),
   )
   def test_sample_and_log_prob(self, distr_params, sample_shape):
     distr_params = (np.asarray(distr_params[0], dtype=np.float32),
@@ -100,13 +100,12 @@ class LaplaceTest(equivalence.EquivalenceTest, parameterized.TestCase):
 
   @chex.all_variants
   @parameterized.named_parameters(
-      ('1d dist, 1d value', (0, 1), 1),
+      ('1d dist, 1d value', (3.1, 1), 1),
       ('1d dist, 2d value', (0.5, 0.1), np.array([1, 2])),
-      ('1d dist, 2d value as list', (0.5, 0.1), [1, 2]),
       ('2d dist, 1d value', (0.5 + np.zeros(2), 0.3 * np.ones(2)), 1),
-      ('2d broadcasted dist, 1d value', (np.zeros(2), 0.8), 1),
+      ('2d broadcasted dist, 1d value', (0.4 + np.zeros(2), 0.8), 1),
       ('2d dist, 2d value', ([0.1, -0.5], 0.9 * np.ones(2)), np.array([1, 2])),
-      ('1d dist, 1d value, edge case', (0, 1), 200),
+      ('1d dist, 1d value, edge case', (2.1, 1), 200),
   )
   def test_log_prob(self, distr_params, value):
     distr_params = (np.asarray(distr_params[0], dtype=np.float32),
@@ -120,13 +119,12 @@ class LaplaceTest(equivalence.EquivalenceTest, parameterized.TestCase):
 
   @chex.all_variants
   @parameterized.named_parameters(
-      ('1d dist, 1d value', (0, 1), 1),
+      ('1d dist, 1d value', (3.1, 1), 1),
       ('1d dist, 2d value', (0.5, 0.1), np.array([1, 2])),
-      ('1d dist, 2d value as list', (0.5, 0.1), [1, 2]),
       ('2d dist, 1d value', (0.5 + np.zeros(2), 0.3 * np.ones(2)), 1),
-      ('2d broadcasted dist, 1d value', (np.zeros(2), 0.8), 1),
+      ('2d broadcasted dist, 1d value', (0.4 + np.zeros(2), 0.8), 1),
       ('2d dist, 2d value', ([0.1, -0.5], 0.9 * np.ones(2)), np.array([1, 2])),
-      ('1d dist, 1d value, edge case', (0, 1), 200),
+      ('1d dist, 1d value, edge case', (2.1, 1), 200),
   )
   def test_prob(self, distr_params, value):
     distr_params = (np.asarray(distr_params[0], dtype=np.float32),
@@ -140,13 +138,12 @@ class LaplaceTest(equivalence.EquivalenceTest, parameterized.TestCase):
 
   @chex.all_variants
   @parameterized.named_parameters(
-      ('1d dist, 1d value', (0, 1), 1),
+      ('1d dist, 1d value', (3.1, 1), 1),
       ('1d dist, 2d value', (0.5, 0.1), np.array([1, 2])),
-      ('1d dist, 2d value as list', (0.5, 0.1), [1, 2]),
       ('2d dist, 1d value', (0.5 + np.zeros(2), 0.3 * np.ones(2)), 1),
-      ('2d broadcasted dist, 1d value', (np.zeros(2), 0.8), 1),
+      ('2d broadcasted dist, 1d value', (0.4 + np.zeros(2), 0.8), 1),
       ('2d dist, 2d value', ([0.1, -0.5], 0.9 * np.ones(2)), np.array([1, 2])),
-      ('1d dist, 1d value, edge case', (0, 1), 200),
+      ('1d dist, 1d value, edge case', (2.1, 1), 200),
   )
   def test_cdf(self, distr_params, value):
     distr_params = (np.asarray(distr_params[0], dtype=np.float32),
@@ -158,43 +155,23 @@ class LaplaceTest(equivalence.EquivalenceTest, parameterized.TestCase):
         call_args=(value,),
         assertion_fn=self.assertion_fn)
 
-  @chex.all_variants
-  @parameterized.named_parameters(
-      ('1d dist, 1d value', (0, 1), 1),
-      ('1d dist, 2d value', (0.5, 0.1), np.array([1, 2])),
-      ('1d dist, 2d value as list', (0.5, 0.1), [1, 2]),
-      ('2d dist, 1d value', (0.5 + np.zeros(2), 0.3 * np.ones(2)), 1),
-      ('2d broadcasted dist, 1d value', (np.zeros(2), 0.8), 1),
-      ('2d dist, 2d value', ([0.1, -0.5], 0.9 * np.ones(2)), np.array([1, 2])),
-      ('1d dist, 1d value, edge case', (0, 1), 200),
-  )
-  def test_log_cdf(self, distr_params, value):
-    distr_params = (np.asarray(distr_params[0], dtype=np.float32),
-                    np.asarray(distr_params[1], dtype=np.float32))
-    value = np.asarray(value, dtype=np.float32)
-    super()._test_attribute(
-        attribute_string='log_cdf',
-        dist_args=distr_params,
-        call_args=(value,),
-        assertion_fn=self.assertion_fn)
-
   @chex.all_variants(with_pmap=False)
   @parameterized.named_parameters(
-      ('entropy', ([0., 1., -0.5], [0.5, 1., 1.5]), 'entropy'),
-      ('entropy broadcasted loc', (0.5, [0.5, 1., 1.5]), 'entropy'),
-      ('entropy broadcasted scale', ([0., 1., -0.5], 0.8), 'entropy'),
-      ('mean', ([0., 1., -0.5], [0.5, 1., 1.5]), 'mean'),
-      ('mean broadcasted loc', (0.5, [0.5, 1., 1.5]), 'mean'),
-      ('mean broadcasted scale', ([0., 1., -0.5], 0.8), 'mean'),
-      ('variance', ([0., 1., -0.5], [0.5, 1., 1.5]), 'variance'),
-      ('variance broadcasted loc', (0.5, [0.5, 1., 1.5]), 'variance'),
-      ('variance broadcasted scale', ([0., 1., -0.5], 0.8), 'variance'),
-      ('stddev', ([0., 1., -0.5], [0.5, 1., 1.5]), 'stddev'),
-      ('stddev broadcasted loc', (0.5, [0.5, 1., 1.5]), 'stddev'),
-      ('stddev broadcasted scale', ([0., 1., -0.5], 0.8), 'stddev'),
-      ('mode', ([0., 1., -0.5], [0.5, 1., 1.5]), 'mode'),
-      ('mode broadcasted loc', (0.5, [0.5, 1., 1.5]), 'mode'),
-      ('mode broadcasted scale', ([0., 1., -0.5], 0.8), 'mode'),
+      ('entropy', ([0., 1.3, -0.5], [0.5, 1.3, 1.5]), 'entropy'),
+      ('entropy broadcasted concentration', (0.5, [0.5, 1.3, 1.5]), 'entropy'),
+      ('entropy broadcasted rate', ([0.1, 1.3, -0.5], 0.8), 'entropy'),
+      ('mean', ([0.1, 1.3, -0.5], [0.5, 1.3, 1.5]), 'mean'),
+      ('mean broadcasted concentration', (0.5, [0.5, 1.3, 1.5]), 'mean'),
+      ('mean broadcasted rate', ([0.1, 1.3, -0.5], 0.8), 'mean'),
+      ('variance', ([0.1, 1.3, -0.5], [0.5, 1.3, 1.5]), 'variance'),
+      ('variance broadcasted concentration', (0.5, [0.5, 1., 1.]), 'variance'),
+      ('variance broadcasted rate', ([0.1, 1.3, -0.5], 0.8), 'variance'),
+      ('stddev', ([0.1, 1.3, -0.5], [0.5, 1.3, 1.5]), 'stddev'),
+      ('stddev broadcasted concentration', (0.5, [0.5, 1.3, 1.5]), 'stddev'),
+      ('stddev broadcasted rate', ([0.1, 1.3, -0.5], 0.8), 'stddev'),
+      ('mode', ([0.1, 1.3, -0.5], [0.5, 1.3, 1.5]), 'mode'),
+      ('mode broadcasted concentration', (0.5, [0.5, 1.3, 1.5]), 'mode'),
+      ('mode broadcasted rate', ([0.1, 1.3, -0.5], 0.8), 'mode'),
   )
   def test_method(self, distr_params, function_string):
     distr_params = (np.asarray(distr_params[0], dtype=np.float32),
@@ -206,18 +183,6 @@ class LaplaceTest(equivalence.EquivalenceTest, parameterized.TestCase):
 
   @chex.all_variants(with_pmap=False)
   @parameterized.named_parameters(
-      ('no broadcast', ([0., 1., -0.5], [0.5, 1., 1.5])),
-      ('broadcasted loc', (0.5, [0.5, 1., 1.5])),
-      ('broadcasted scale', ([0., 1., -0.5], 0.8)),
-  )
-  def test_median(self, distr_params):
-    distr_params = (np.asarray(distr_params[0], dtype=np.float32),
-                    np.asarray(distr_params[1], dtype=np.float32))
-    dist = self.distrax_cls(*distr_params)
-    self.assertion_fn(self.variant(dist.median)(), dist.mean())
-
-  @chex.all_variants(with_pmap=False)
-  @parameterized.named_parameters(
       ('kl distrax_to_distrax', 'kl_divergence', 'distrax_to_distrax'),
       ('kl distrax_to_tfp', 'kl_divergence', 'distrax_to_tfp'),
       ('kl tfp_to_distrax', 'kl_divergence', 'tfp_to_distrax'),
@@ -226,21 +191,23 @@ class LaplaceTest(equivalence.EquivalenceTest, parameterized.TestCase):
       ('cross-ent tfp_to_distrax', 'cross_entropy', 'tfp_to_distrax')
   )
   def test_with_two_distributions(self, function_string, mode_string):
+    rtol = 1e-3
+    atol = 1e-4
     super()._test_with_two_distributions(
         attribute_string=function_string,
         mode_string=mode_string,
         dist1_kwargs={
-            'loc': np.random.randn(4, 1, 2),
-            'scale': np.array([[0.8, 0.2], [0.1, 1.2], [1.4, 3.1]]),
+            'concentration': np.random.rand(4, 1, 2),
+            'rate': np.array([[0.8, 0.2], [0.1, 1.2], [1.4, 3.1]]),
         },
         dist2_kwargs={
-            'loc': np.random.randn(3, 2),
-            'scale': 0.1 + np.random.rand(4, 1, 2),
+            'concentration': np.random.rand(3, 2),
+            'rate': 0.1 + np.random.rand(4, 1, 2),
         },
-        assertion_fn=self.assertion_fn)
+        assertion_fn=lambda x, y: np.testing.assert_allclose(x, y, rtol, atol))
 
   def test_jitable(self):
-    super()._test_jittable((0., 1.))
+    super()._test_jittable((0.1, 1.5), assertion_fn=self.assertion_fn)
 
   @parameterized.named_parameters(
       ('single element', 2),
@@ -249,17 +216,18 @@ class LaplaceTest(equivalence.EquivalenceTest, parameterized.TestCase):
       ('ellipsis', (Ellipsis, -1)),
   )
   def test_slice(self, slice_):
-    loc = jnp.array(np.random.randn(3, 4, 5))
-    scale = jnp.array(np.random.randn(3, 4, 5))
-    dist = self.distrax_cls(loc=loc, scale=scale)
-    self.assertion_fn(dist[slice_].mean(), loc[slice_])
+    concentration = jnp.array(np.abs(np.random.randn(3, 4, 5)))
+    rate = jnp.array(np.abs(np.random.randn(3, 4, 5)))
+    dist = self.distrax_cls(concentration, rate)
+    self.assertion_fn(dist[slice_].concentration, concentration[slice_])
+    self.assertion_fn(dist[slice_].rate, rate[slice_])
 
   def test_slice_different_parameterization(self):
-    loc = jnp.array(np.random.randn(4))
-    scale = jnp.array(np.random.randn(3, 4))
-    dist = self.distrax_cls(loc=loc, scale=scale)
-    self.assertion_fn(dist[0].loc, loc)  # Not slicing loc.
-    self.assertion_fn(dist[0].scale, scale[0])
+    concentration = jnp.array(np.abs(np.random.randn(3, 4, 5)))
+    rate = jnp.array(np.abs(np.random.randn(4, 5)))
+    dist = self.distrax_cls(concentration, rate)
+    self.assertion_fn(dist[0].concentration, concentration[0])
+    self.assertion_fn(dist[0].rate, rate)  # Not slicing rate.
 
 
 if __name__ == '__main__':

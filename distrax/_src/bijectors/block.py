@@ -32,15 +32,14 @@ class Block(base.Bijector):
   considers that array of events to be a single event. In practical terms, this
   means that the log det Jacobian will be summed over its last k dimensions.
 
-  For example, consider a scalar bijector (such as `Lambda(jnp.tanh)`) that
-  operates on scalar events. We may want to apply this bijector identically to a
-  4D array of shape [N, H, W, C] representing a sequence of N images. Doing so
-  naively will produce a log det Jacobian of shape [N, H, W, C], because the
-  scalar bijector will assume scalar events and so all 4 dimensions will be
-  considered as batch. To promote the scalar bijector to a "block scalar" that
-  operates on the 3D arrays can be done by `Block(bijector, ndims=3)`. Then,
-  applying the block bijector will produce a log det Jacobian of shape [N] as
-  desired.
+  For example, consider a scalar bijector (such as `Tanh`) that operates on
+  scalar events. We may want to apply this bijector identically to a 4D array of
+  shape [N, H, W, C] representing a sequence of N images. Doing so naively will
+  produce a log det Jacobian of shape [N, H, W, C], because the scalar bijector
+  will assume scalar events and so all 4 dimensions will be considered as batch.
+  To promote the scalar bijector to a "block scalar" that operates on the 3D
+  arrays can be done by `Block(bijector, ndims=3)`. Then, applying the block
+  bijector will produce a log det Jacobian of shape [N] as desired.
 
   In general, suppose `bijector` operates on n-dimensional events. Then,
   `Block(bijector, k)` will promote `bijector` to a block bijector that
@@ -116,3 +115,10 @@ class Block(base.Bijector):
   def name(self) -> str:
     """Name of the bijector."""
     return self.__class__.__name__ + self._bijector.name
+
+  def same_as(self, other: base.Bijector) -> bool:
+    """Returns True if this bijector is guaranteed to be the same as `other`."""
+    if type(other) is Block:  # pylint: disable=unidiomatic-typecheck
+      return self.bijector.same_as(other.bijector) and self.ndims == other.ndims
+
+    return False

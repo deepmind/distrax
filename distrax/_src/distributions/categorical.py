@@ -38,7 +38,7 @@ class Categorical(distribution.Distribution):
   def __init__(self,
                logits: Optional[Array] = None,
                probs: Optional[Array] = None,
-               dtype: jnp.dtype = jnp.int_):
+               dtype: jnp.dtype = int):
     """Initializes a Categorical distribution.
 
     Args:
@@ -50,8 +50,6 @@ class Categorical(distribution.Distribution):
     """
     super().__init__()
     chex.assert_exactly_one_is_none(probs, logits)
-    chex.if_args_not_none(chex.assert_axis_dimension_gt, probs, axis=-1, val=1)
-    chex.if_args_not_none(chex.assert_axis_dimension_gt, logits, axis=-1, val=1)
     if not (jnp.issubdtype(dtype, jnp.integer) or
             jnp.issubdtype(dtype, jnp.floating)):
       raise ValueError(
@@ -98,7 +96,11 @@ class Categorical(distribution.Distribution):
   def log_prob(self, value: Array) -> Array:
     """See `Distribution.log_prob`."""
     value_one_hot = jax.nn.one_hot(value, self.num_categories)
-    return jnp.sum(math.multiply_no_nan(self.logits, value_one_hot), axis=-1)
+    mask_outside_domain = jnp.logical_or(
+        value < 0, value > self.num_categories - 1)
+    return jnp.where(
+        mask_outside_domain, -jnp.inf,
+        jnp.sum(math.multiply_no_nan(self.logits, value_one_hot), axis=-1))
 
   def prob(self, value: Array) -> Array:
     """See `Distribution.prob`."""
@@ -146,6 +148,12 @@ class Categorical(distribution.Distribution):
     """Wrapper for `logits` property, for TFP API compatibility."""
     return self.logits
 
+  def __getitem__(self, index) -> 'Categorical':
+    """See `Distribution.__getitem__`."""
+    index = distribution.to_batch_shape_index(self.batch_shape, index)
+    if self._logits is not None:
+      return Categorical(logits=self.logits[index], dtype=self._dtype)
+    return Categorical(probs=self.probs[index], dtype=self._dtype)
 
 CategoricalLike = Union[Categorical, tfd.Categorical]
 
@@ -174,10 +182,10 @@ def _kl_divergence_categorical_categorical(
 
   if num_categories1 != num_categories2:
     raise ValueError(
-        'Cannot obtain the KL between two Categorical distributions '
-        'with different number of categories: the first distribution has {} '
-        'categories, while the second distribution has {} categories'.format(
-            num_categories1, num_categories2))
+        f'Cannot obtain the KL between two Categorical distributions '
+        f'with different number of categories: the first distribution has '
+        f'{num_categories1} categories, while the second distribution has '
+        f'{num_categories2} categories.')
 
   # pylint: disable=protected-access
   if dist1._probs is None:

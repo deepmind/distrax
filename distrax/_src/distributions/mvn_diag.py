@@ -113,7 +113,10 @@ class MultivariateNormalDiag(distribution.Distribution):
   def _sample_n(self, key: PRNGKey, n: int) -> Array:
     """See `Distribution._sample_n`."""
     rnd = self._sample_from_std_normal(key, n)
-    return self._loc + self._scale_diag * rnd
+    scale = jnp.expand_dims(self._scale_diag,
+                            range(rnd.ndim - self._scale_diag.ndim))
+    loc = jnp.expand_dims(self._loc, range(rnd.ndim - self._loc.ndim))
+    return scale * rnd + loc
 
   def _sample_n_and_log_prob(self, key: PRNGKey, n: int) -> Tuple[Array, Array]:
     """See `Distribution._sample_n_and_log_prob`."""
@@ -181,6 +184,12 @@ class MultivariateNormalDiag(distribution.Distribution):
       Diagonal covariance matrix.
     """
     return jnp.vectorize(jnp.diag, signature='(k)->(k,k)')(self.variance())
+
+  def __getitem__(self, index) -> 'MultivariateNormalDiag':
+    """See `Distribution.__getitem__`."""
+    index = distribution.to_batch_shape_index(self.batch_shape, index)
+    return MultivariateNormalDiag(
+        loc=self.loc[index], scale_diag=self.scale_diag[index])
 
 
 def _kl_divergence_mvndiag_mvndiag(

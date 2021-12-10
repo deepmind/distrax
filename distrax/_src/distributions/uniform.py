@@ -77,7 +77,9 @@ class Uniform(distribution.Distribution):
     new_shape = (n,) + self.batch_shape
     uniform = jax.random.uniform(
         key=key, shape=new_shape, dtype=self.range.dtype, minval=0., maxval=1.)
-    return self.low + self.range * uniform
+    low = jnp.expand_dims(self._low, range(uniform.ndim - self._low.ndim))
+    range_ = jnp.expand_dims(self.range, range(uniform.ndim - self.range.ndim))
+    return low + range_ * uniform
 
   def _sample_n_and_log_prob(self, key: PRNGKey, n: int) -> Tuple[Array, Array]:
     """See `Distribution._sample_n_and_log_prob`."""
@@ -128,6 +130,11 @@ class Uniform(distribution.Distribution):
   def log_cdf(self, value: Array) -> Array:
     """See `Distribution.log_cdf`."""
     return jnp.log(self.cdf(value))
+
+  def __getitem__(self, index) -> 'Uniform':
+    """See `Distribution.__getitem__`."""
+    index = distribution.to_batch_shape_index(self.batch_shape, index)
+    return Uniform(low=self.low[index], high=self.high[index])
 
 
 def _kl_divergence_uniform_uniform(

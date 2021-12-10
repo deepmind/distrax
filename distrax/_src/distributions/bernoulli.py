@@ -43,7 +43,7 @@ class Bernoulli(distribution.Distribution):
   def __init__(self,
                logits: Optional[Numeric] = None,
                probs: Optional[Numeric] = None,
-               dtype: jnp.dtype = jnp.int_):
+               dtype: jnp.dtype = int):
     """Initializes a Bernoulli distribution.
 
     Args:
@@ -145,6 +145,13 @@ class Bernoulli(distribution.Distribution):
   def median(self) -> Array:
     """See `Distribution.median`."""
     return self.mean()
+
+  def __getitem__(self, index) -> 'Bernoulli':
+    """See `Distribution.__getitem__`."""
+    index = distribution.to_batch_shape_index(self.batch_shape, index)
+    if self._logits is not None:
+      return Bernoulli(logits=self.logits[index], dtype=self._dtype)
+    return Bernoulli(probs=self.probs[index], dtype=self._dtype)
 
 
 def _probs_and_log_probs(

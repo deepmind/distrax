@@ -57,10 +57,18 @@ class TFPCompatibleDistributionNormal(parameterized.TestCase):
     return tfp_compatible_distribution(self.base_dist)
 
   def test_event_shape(self):
-    chex.assert_equal(self.wrapped_dist.event_shape, self.base_dist.event_shape)
+    self.assertEqual(self.wrapped_dist.event_shape, self.base_dist.event_shape)
+
+  def test_event_shape_types(self):
+    wrapped_dist = tfp_compatible_distribution(self.distrax_second_dist)
+    self.assertEqual(
+        type(wrapped_dist.event_shape), type(self.tfp_second_dist.event_shape))
+    self.assertEqual(
+        type(wrapped_dist.event_shape_tensor()),
+        type(self.tfp_second_dist.event_shape_tensor()))
 
   def test_batch_shape(self):
-    chex.assert_equal(self.wrapped_dist.batch_shape, self.base_dist.batch_shape)
+    self.assertEqual(self.wrapped_dist.batch_shape, self.base_dist.batch_shape)
 
   @chex.all_variants
   def test_sample(self):
@@ -255,6 +263,30 @@ class TfpMetaDistributionsWithWrappedBaseDistribution(parameterized.TestCase):
     meta_dist = tfd.JointDistributionCoroutineAutoBatched(
         model_fn, validate_args=True)
     meta_dist.log_prob(meta_dist.sample(7, seed=self._key))
+
+
+class TFPCompatibleDistributionSlicing(parameterized.TestCase):
+  """Class to test the `getitem` method."""
+
+  def setUp(self):
+    super().setUp()
+    self.assertion_fn = lambda x, y: np.testing.assert_allclose(x, y, rtol=RTOL)
+
+  @parameterized.named_parameters(
+      ('single element', 2),
+      ('range', slice(-1)),
+      ('range_2', (slice(None), slice(-1))),
+      ('ellipsis', (Ellipsis, -1)),
+  )
+  def test_slice(self, slice_):
+    loc = np.random.randn(3, 4, 5)
+    base_dist = Normal(loc=loc, scale=1.)
+    dist = tfp_compatible_distribution(base_dist)
+    sliced_dist = dist[slice_]
+    self.assertIsInstance(sliced_dist, base_dist.__class__)
+    self.assertIsInstance(sliced_dist.batch_shape, tfp.tf2jax.TensorShape)
+    self.assertTrue(sliced_dist.allow_nan_stats)
+    self.assertion_fn(sliced_dist.loc, loc[slice_])
 
 
 if __name__ == '__main__':

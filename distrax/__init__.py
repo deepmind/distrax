@@ -37,6 +37,7 @@ from distrax._src.distributions.deterministic import Deterministic
 from distrax._src.distributions.distribution import Distribution
 from distrax._src.distributions.distribution import DistributionLike
 from distrax._src.distributions.epsilon_greedy import EpsilonGreedy
+from distrax._src.distributions.gamma import Gamma
 from distrax._src.distributions.greedy import Greedy
 from distrax._src.distributions.independent import Independent
 from distrax._src.distributions.laplace import Laplace
@@ -50,6 +51,7 @@ from distrax._src.distributions.normal import Normal
 from distrax._src.distributions.one_hot_categorical import OneHotCategorical
 from distrax._src.distributions.quantized import Quantized
 from distrax._src.distributions.softmax import Softmax
+from distrax._src.distributions.straight_through import straight_through_wrapper
 from distrax._src.distributions.transformed import Transformed
 from distrax._src.distributions.uniform import Uniform
 
@@ -57,6 +59,7 @@ from distrax._src.distributions.uniform import Uniform
 from distrax._src.utils.conversion import as_bijector
 from distrax._src.utils.conversion import as_distribution
 from distrax._src.utils.conversion import to_tfp
+from distrax._src.utils.hmm import HMM
 from distrax._src.utils.importance_sampling import importance_sampling_ratios
 from distrax._src.utils.math import multiply_no_nan
 from distrax._src.utils.monte_carlo import estimate_kl_best_effort
@@ -65,11 +68,12 @@ from distrax._src.utils.monte_carlo import mc_estimate_kl_with_reparameterized
 from distrax._src.utils.monte_carlo import mc_estimate_mode
 from distrax._src.utils.transformations import register_inverse
 
-__version__ = "0.0.1"
+__version__ = "0.1.0"
 
 __all__ = (
     "as_bijector",
     "as_distribution",
+    "straight_through_wrapper",
     "Bernoulli",
     "Bijector",
     "BijectorLike",
@@ -80,7 +84,9 @@ __all__ = (
     "DistributionLike",
     "EpsilonGreedy",
     "estimate_kl_best_effort",
+    "Gamma",
     "Greedy",
+    "HMM",
     "importance_sampling_ratios",
     "Independent",
     "Inverse",

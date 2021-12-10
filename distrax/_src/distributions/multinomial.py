@@ -23,7 +23,7 @@ import chex
 from distrax._src.distributions import distribution
 from distrax._src.utils import math
 import jax
-import jax.lax as lax
+from jax import lax
 import jax.numpy as jnp
 from tensorflow_probability.substrates import jax as tfp
 
@@ -44,7 +44,7 @@ class Multinomial(distribution.Distribution):
                total_count: Numeric,
                logits: Optional[Array] = None,
                probs: Optional[Array] = None,
-               dtype: jnp.dtype = jnp.int_):
+               dtype: jnp.dtype = int):
     """Initializes a Multinomial distribution.
 
     Args:
@@ -75,7 +75,7 @@ class Multinomial(distribution.Distribution):
     else:
       assert self._logits is not None
       probs_batch_shape = self._logits.shape[:-1]
-    self._batch_shape = jax.lax.broadcast_shapes(
+    self._batch_shape = lax.broadcast_shapes(
         probs_batch_shape, self._total_count.shape)
 
   @property
@@ -264,3 +264,13 @@ class Multinomial(distribution.Distribution):
         jnp.diag, signature='(k)->(k,k)')(
             self._total_count[..., None] * probs)
     return cov_matrix
+
+  def __getitem__(self, index) -> 'Multinomial':
+    """See `Distribution.__getitem__`."""
+    index = distribution.to_batch_shape_index(self.batch_shape, index)
+    total_count = self.total_count[index]
+    if self._logits is not None:
+      return Multinomial(
+          total_count=total_count, logits=self.logits[index], dtype=self._dtype)
+    return Multinomial(
+        total_count=total_count, probs=self.probs[index], dtype=self._dtype)
